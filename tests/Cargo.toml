@@ -1,0 +1,51 @@
+[package]
+name = "market-bot-tests"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+async-trait = "0.1"
+axum = "0.8"
+chrono = { version = "0.4", features = ["clock", "serde"] }
+http-body-util = "0.1"
+market-bot-ai-agent = { path = "../crates/ai_agent" }
+market-bot-api = { path = "../apps/api" }
+market-bot-cart = { path = "../crates/cart" }
+market-bot-catalog = { path = "../crates/catalog" }
+market-bot-fulfillment = { path = "../crates/fulfillment" }
+market-bot-moderation = { path = "../crates/moderation" }
+market-bot-order = { path = "../crates/order" }
+market-bot-payment = { path = "../crates/payment" }
+market-bot-search = { path = "../crates/search" }
+market-bot-seller = { path = "../crates/seller" }
+market-bot-shared = { path = "../crates/shared" }
+market-bot-worker = { path = "../apps/worker" }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tower = "0.5"
+uuid = { version = "1", features = ["serde", "v4"] }
+
+[[test]]
+name = "payment_webhook_idempotency"
+path = "payment_webhook_idempotency.rs"
+
+[[test]]
+name = "moderation_visibility"
+path = "moderation_visibility.rs"
+
+[[test]]
+name = "digital_fulfillment"
+path = "digital_fulfillment.rs"
+
+[[test]]
+name = "shipment_state"
+path = "shipment_state.rs"
+
+[[test]]
+name = "ai_authorization"
+path = "ai_authorization.rs"
+
+[[test]]
+name = "ai_auto_purchase_policy"
+path = "ai_auto_purchase_policy.rs"

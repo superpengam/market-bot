@@ -1,0 +1,1412 @@
+openapi: 3.1.0
+info:
+  title: Market Bot API
+  version: 0.1.0
+  description: Public API contract for the Market Bot backend.
+servers:
+  - url: /api/v1
+paths:
+  /products/search:
+    get:
+      operationId: searchProducts
+      summary: Search published products
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: category_id
+          in: query
+          schema:
+            type: string
+        - name: currency
+          in: query
+          schema:
+            $ref: '#/components/schemas/CurrencyCode'
+        - name: min_price_minor
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - name: max_price_minor
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSearchPage'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+  /products/{product_id}:
+    get:
+      operationId: getProduct
+      summary: Read a published product
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /seller/stores:
+    post:
+      operationId: createSellerStore
+      summary: Create a seller store
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStoreRequest'
+      responses:
+        '200':
+          description: Store created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+  /seller/products:
+    post:
+      operationId: createSellerProduct
+      summary: Create a seller product draft
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSellerProductRequest'
+      responses:
+        '200':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetail'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+  /seller/products/{product_id}:
+    patch:
+      operationId: patchSellerProduct
+      summary: Update a seller product
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '501':
+          description: Product updates are not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /carts:
+    post:
+      operationId: createCart
+      summary: Create a buyer cart
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Cart created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+  /carts/{cart_id}:
+    get:
+      operationId: getCart
+      summary: Read a cart
+      parameters:
+        - name: cart_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /carts/{cart_id}/items:
+    post:
+      operationId: addCartItem
+      summary: Add an item to a cart
+      parameters:
+        - name: cart_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItemRequest'
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /carts/{cart_id}/items/{item_id}:
+    patch:
+      operationId: updateCartItem
+      summary: Update cart item quantity
+      parameters:
+        - name: cart_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCartItemRequest'
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteCartItem
+      summary: Remove a cart item
+      parameters:
+        - name: cart_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '204':
+          description: Item removed
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /checkout/preview:
+    post:
+      operationId: previewCheckout
+      summary: Preview checkout totals from catalog prices
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutPreviewRequest'
+      responses:
+        '200':
+          description: Checkout preview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutPreview'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /orders:
+    post:
+      operationId: createOrder
+      summary: Create an order from a cart
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '200':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /orders/{order_id}:
+    get:
+      operationId: getOrder
+      summary: Read an order
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /orders/{order_id}/cancel:
+    post:
+      operationId: cancelOrder
+      summary: Cancel an order
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Cancelled order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Order cannot be cancelled from its current status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /ai/products/search:
+    get:
+      operationId: searchAiProducts
+      summary: Search published products as an authorized AI client
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/AiAuthorizationId'
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: category_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiProductSearchPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /ai/carts/{cart_id}/items:
+    post:
+      operationId: addAiCartItem
+      summary: Add an item to a cart as an authorized AI client
+      parameters:
+        - name: cart_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/AiAuthorizationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiAddCartItemRequest'
+      responses:
+        '200':
+          description: Updated cart. Added items persist source ai.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ai/orders:
+    post:
+      operationId: createAiOrder
+      summary: Auto-purchase a product as an authorized AI client
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/AiAuthorizationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiAutoPurchaseRequest'
+      responses:
+        '200':
+          description: Order created. Payment tokens are never returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Price changed or user confirmation is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /ai/orders/{order_id}:
+    get:
+      operationId: getAiOrder
+      summary: Read an AI-created order as an authorized AI client
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/AiAuthorizationId'
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/products/{product_id}/reviews:
+    post:
+      operationId: reviewProduct
+      summary: Review a product as an administrator
+      security:
+        - adminBearer: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewProductRequest'
+      responses:
+        '200':
+          description: Review recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationActionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Product not found
+  /admin/products/{product_id}/suspend:
+    post:
+      operationId: suspendProduct
+      summary: Suspend a product as an administrator
+      security:
+        - adminBearer: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuspendProductRequest'
+      responses:
+        '200':
+          description: Product suspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationActionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /reports:
+    post:
+      operationId: createReport
+      summary: Create a user report
+      security:
+        - userBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReportRequest'
+      responses:
+        '200':
+          description: Report created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateReportResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /admin/reports/{report_id}/resolve:
+    post:
+      operationId: resolveReport
+      summary: Resolve a report as an administrator
+      security:
+        - adminBearer: []
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveReportRequest'
+      responses:
+        '200':
+          description: Report resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationActionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Report not found
+components:
+  schemas:
+    CurrencyCode:
+      type: string
+      pattern: '^[A-Z]{3}$'
+      example: USD
+    ProductSearchResult:
+      type: object
+      required:
+        - product_id
+        - variant_ids
+        - title
+        - price_minor
+        - currency
+        - available_stock
+        - fulfillment_type
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        variant_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        title:
+          type: string
+        attributes:
+          type: object
+          additionalProperties:
+            type: string
+        price_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+        available_stock:
+          type: integer
+          format: int64
+          minimum: 0
+        fulfillment_type:
+          type: string
+          enum:
+            - digital
+            - physical_standard
+    ProductSearchPage:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductSearchResult'
+        next_cursor:
+          type:
+            - string
+            - 'null'
+    AiProductSearchResult:
+      type: object
+      required:
+        - product_id
+        - variant_id
+        - title
+        - category_id
+        - price_minor
+        - available_stock
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        category_id:
+          type: string
+        price_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        available_stock:
+          type: integer
+          format: int64
+          minimum: 0
+    AiProductSearchPage:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiProductSearchResult'
+        next_cursor:
+          type:
+            - string
+            - 'null'
+    AiAddCartItemRequest:
+      type: object
+      required:
+        - product_id
+        - variant_id
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          format: int64
+          minimum: 1
+    AiAutoPurchaseRequest:
+      type: object
+      required:
+        - product_id
+        - variant_id
+        - quoted_unit_price_minor
+        - quoted_shipping_minor
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          format: int64
+          minimum: 1
+        quoted_unit_price_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        quoted_shipping_minor:
+          type: integer
+          format: int64
+          minimum: 0
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+        - request_id
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+          format: uuid
+    ReviewProductRequest:
+      type: object
+      required:
+        - decision
+        - reason
+      properties:
+        decision:
+          $ref: '#/components/schemas/ModerationDecision'
+        reason:
+          type: string
+    SuspendProductRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+    CreateReportRequest:
+      type: object
+      required:
+        - subject_type
+        - subject_id
+        - reason_code
+        - details
+      properties:
+        subject_type:
+          type: string
+          enum:
+            - product
+            - seller
+            - user
+        subject_id:
+          type: string
+          format: uuid
+        reason_code:
+          type: string
+        details:
+          type: string
+    ResolveReportRequest:
+      type: object
+      required:
+        - decision
+        - reason
+      properties:
+        decision:
+          $ref: '#/components/schemas/ModerationDecision'
+        reason:
+          type: string
+    CreateReportResponse:
+      type: object
+      required:
+        - moderation_case_id
+        - report_id
+        - status
+      properties:
+        moderation_case_id:
+          type: string
+          format: uuid
+        report_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+    ModerationActionResponse:
+      type: object
+      required:
+        - decision
+        - reason
+        - actor_id
+        - acted_at
+      properties:
+        decision:
+          $ref: '#/components/schemas/ModerationDecision'
+        reason:
+          type: string
+        actor_id:
+          type: string
+          format: uuid
+        acted_at:
+          type: string
+          format: date-time
+    ModerationDecision:
+      type: string
+      enum:
+        - approved
+        - rejected
+        - suspended
+        - needs_review
+    FulfillmentType:
+      type: string
+      enum:
+        - digital
+        - physical_standard
+    CartItemSource:
+      type: string
+      enum:
+        - user
+        - ai
+    ProductStatus:
+      type: string
+      enum:
+        - draft
+        - pending_review
+        - published
+        - suspended
+        - archived
+    OrderStatus:
+      type: string
+      enum:
+        - draft
+        - pending_confirmation
+        - pending_payment
+        - payment_processing
+        - paid
+        - fulfillment_processing
+        - shipped
+        - delivered
+        - completed
+        - cancellation_requested
+        - cancelled
+        - refund_processing
+        - refunded
+        - dispute_processing
+    CreateStoreRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+    Store:
+      type: object
+      required:
+        - store_id
+        - owner_id
+        - seller_id
+        - name
+        - slug
+      properties:
+        store_id:
+          type: string
+          format: uuid
+        owner_id:
+          type: string
+          format: uuid
+        seller_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+    CreateSellerProductRequest:
+      type: object
+      required:
+        - title
+        - description
+        - fulfillment_type
+        - price_minor
+        - currency
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        fulfillment_type:
+          $ref: '#/components/schemas/FulfillmentType'
+        price_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+        available_stock:
+          type: integer
+          format: int64
+          minimum: 0
+        refund_window_days:
+          type: integer
+          minimum: 0
+    ProductVariant:
+      type: object
+      required:
+        - variant_id
+        - sku
+        - price_minor
+        - currency
+        - available_stock
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        price_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+        available_stock:
+          type: integer
+          format: int64
+          minimum: 0
+    DeliveryRules:
+      type: object
+      required:
+        - fulfillment_type
+        - estimated_days_min
+        - estimated_days_max
+      properties:
+        fulfillment_type:
+          $ref: '#/components/schemas/FulfillmentType'
+        estimated_days_min:
+          type: integer
+          minimum: 0
+        estimated_days_max:
+          type: integer
+          minimum: 0
+        digital_method:
+          type: string
+        shipping_regions:
+          type: array
+          items:
+            type: string
+    RefundRules:
+      type: object
+      required:
+        - refund_window_days
+        - is_refundable
+        - summary
+      properties:
+        refund_window_days:
+          type: integer
+          minimum: 0
+        is_refundable:
+          type: boolean
+        summary:
+          type: string
+    ProductDetail:
+      type: object
+      required:
+        - product_id
+        - seller_id
+        - store_name
+        - title
+        - description
+        - fulfillment_type
+        - price_minor
+        - currency
+        - available_stock
+        - status
+        - delivery_rules
+        - refund_rules
+        - variants
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        seller_id:
+          type: string
+          format: uuid
+        store_id:
+          type: string
+          format: uuid
+        store_name:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        fulfillment_type:
+          $ref: '#/components/schemas/FulfillmentType'
+        price_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+        available_stock:
+          type: integer
+          format: int64
+          minimum: 0
+        status:
+          $ref: '#/components/schemas/ProductStatus'
+        delivery_rules:
+          $ref: '#/components/schemas/DeliveryRules'
+        refund_rules:
+          $ref: '#/components/schemas/RefundRules'
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariant'
+    CartItem:
+      type: object
+      required:
+        - cart_item_id
+        - product_id
+        - variant_id
+        - title
+        - unit_price_minor
+        - currency
+        - quantity
+        - source
+        - fulfillment_type
+        - available_stock
+      properties:
+        cart_item_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        unit_price_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+        quantity:
+          type: integer
+          format: int64
+          minimum: 1
+        source:
+          $ref: '#/components/schemas/CartItemSource'
+        fulfillment_type:
+          $ref: '#/components/schemas/FulfillmentType'
+        available_stock:
+          type: integer
+          format: int64
+          minimum: 0
+    Cart:
+      type: object
+      required:
+        - cart_id
+        - items
+      properties:
+        cart_id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+    AddCartItemRequest:
+      type: object
+      required:
+        - product_id
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          format: int64
+          minimum: 1
+        source:
+          $ref: '#/components/schemas/CartItemSource'
+    UpdateCartItemRequest:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          format: int64
+          minimum: 1
+    CheckoutPreviewRequest:
+      type: object
+      required:
+        - cart_id
+      properties:
+        cart_id:
+          type: string
+          format: uuid
+    CheckoutLineItem:
+      type: object
+      required:
+        - product_id
+        - variant_id
+        - title
+        - quantity
+        - snapshot_unit_price_minor
+        - current_unit_price_minor
+        - currency
+        - fulfillment_type
+        - available_stock
+        - source
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        quantity:
+          type: integer
+          format: int64
+          minimum: 1
+        snapshot_unit_price_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        current_unit_price_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+        fulfillment_type:
+          $ref: '#/components/schemas/FulfillmentType'
+        available_stock:
+          type: integer
+          format: int64
+          minimum: 0
+        source:
+          $ref: '#/components/schemas/CartItemSource'
+    CheckoutPreview:
+      type: object
+      required:
+        - items
+        - subtotal_minor
+        - shipping_fee_minor
+        - tax_minor
+        - total_minor
+        - currency
+        - expires_at
+        - requires_price_reconfirm
+        - inventory_is_available
+        - payment_provider_status
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutLineItem'
+        subtotal_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        shipping_fee_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        tax_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        total_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+        expires_at:
+          type: string
+          format: date-time
+        requires_price_reconfirm:
+          type: boolean
+        inventory_is_available:
+          type: boolean
+        payment_provider_status:
+          type: string
+          enum:
+            - not_started
+            - redirecting
+            - awaiting_return
+            - completed
+            - failed
+    CreateOrderRequest:
+      type: object
+      properties:
+        cart_id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateOrderItemRequest'
+    CreateOrderItemRequest:
+      type: object
+      required:
+        - product_id
+        - variant_id
+        - quantity
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          format: int64
+          minimum: 1
+        title:
+          type: string
+        unit_price_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+        seller_id:
+          type: string
+          format: uuid
+        fulfillment_type:
+          $ref: '#/components/schemas/FulfillmentType'
+    OrderLineItem:
+      type: object
+      required:
+        - order_item_id
+        - product_id
+        - variant_id
+        - title
+        - quantity
+        - unit_price_minor
+        - currency
+        - fulfillment_type
+      properties:
+        order_item_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        quantity:
+          type: integer
+          format: int64
+          minimum: 1
+        unit_price_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+        fulfillment_type:
+          $ref: '#/components/schemas/FulfillmentType'
+    OrderDetail:
+      type: object
+      required:
+        - order_id
+        - order_status
+        - payment_status
+        - fulfillment_status
+        - items
+        - subtotal_minor
+        - shipping_fee_minor
+        - tax_minor
+        - total_minor
+        - currency
+        - created_at
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        order_status:
+          $ref: '#/components/schemas/OrderStatus'
+        payment_status:
+          type: string
+        fulfillment_status:
+          type: string
+        shipment_status:
+          type:
+            - string
+            - 'null'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLineItem'
+        subtotal_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        shipping_fee_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        tax_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        total_minor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+        created_at:
+          type: string
+          format: date-time
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      schema:
+        type: string
+    UserId:
+      name: X-User-Id
+      in: header
+      description: Optional caller UUID. When omitted, a well-known test user is used.
+      schema:
+        type: string
+        format: uuid
+    AiAuthorizationId:
+      name: X-Ai-Authorization-Id
+      in: header
+      required: true
+      description: UUID of an AI authorization previously issued to the client.
+      schema:
+        type: string
+        format: uuid
+  securitySchemes:
+    adminBearer:
+      type: http
+      scheme: bearer
+      description: Admin token in the form admin/{user_id}
+    userBearer:
+      type: http
+      scheme: bearer
+      description: User token in the form user/{user_id}
+  responses:
+    InvalidInput:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Authentication is required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Caller is authenticated but not authorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

@@ -1,0 +1,23 @@
+[package]
+name = "market-bot-ai-agent"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["clock", "serde"] }
+market-bot-cart = { path = "../cart" }
+market-bot-catalog = { path = "../catalog" }
+market-bot-order = { path = "../order" }
+market-bot-shared = { path = "../shared" }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
+uuid = { version = "1", features = ["serde", "v4"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

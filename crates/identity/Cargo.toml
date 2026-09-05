@@ -1,0 +1,13 @@
+[package]
+name = "market-bot-identity"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+market-bot-shared = { path = "../shared" }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"

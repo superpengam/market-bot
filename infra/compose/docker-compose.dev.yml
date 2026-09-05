@@ -1,0 +1,128 @@
+# Local development stack. From the repository root:
+#   docker compose -f infra/compose/docker-compose.dev.yml up --build
+#
+# Uses sandbox payment and logistics only. Do not point these services
+# at production databases, buckets, or payment credentials.
+
+name: market-bot-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: marketbot
+      POSTGRES_PASSWORD: marketbot_dev
+      POSTGRES_DB: marketbot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketbot -d marketbot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: marketbot
+      MINIO_ROOT_PASSWORD: marketbot_dev
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  # OpenSearch is omitted from the default local stack because the JVM image
+  # is heavy for everyday development. Uncomment when you need to exercise
+  # search-index integration against a real cluster.
+  #
+  # opensearch:
+  #   image: opensearchproject/opensearch:2
+  #   environment:
+  #     discovery.type: single-node
+  #     DISABLE_SECURITY_PLUGIN: "true"
+  #     OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+  #   ports:
+  #     - "9200:9200"
+  #   volumes:
+  #     - opensearch_data:/usr/share/opensearch/data
+
+  # Transactional outbox lives in PostgreSQL. A separate queue broker is not
+  # part of this local stack.
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/api.Dockerfile
+    environment:
+      API_BIND_ADDRESS: 0.0.0.0:3000
+      DATABASE_URL: postgres://marketbot:marketbot_dev@postgres:5432/marketbot
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: market-bot-dev
+      S3_ACCESS_KEY: marketbot
+      S3_SECRET_KEY: marketbot_dev
+      S3_REGION: us-east-1
+      PAYMENT_PROVIDER: sandbox
+      LOGISTICS_PROVIDER: sandbox
+      RUST_LOG: info
+      OTEL_SERVICE_NAME: market-bot-api
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/worker.Dockerfile
+    environment:
+      DATABASE_URL: postgres://marketbot:marketbot_dev@postgres:5432/marketbot
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: market-bot-dev
+      S3_ACCESS_KEY: marketbot
+      S3_SECRET_KEY: marketbot_dev
+      S3_REGION: us-east-1
+      PAYMENT_PROVIDER: sandbox
+      LOGISTICS_PROVIDER: sandbox
+      RUST_LOG: info
+      OTEL_SERVICE_NAME: market-bot-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/web.Dockerfile
+    environment:
+      API_ORIGIN: http://api:3000
+      NEXT_PUBLIC_API_BASE_URL: /api/v1
+    ports:
+      - "3001:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  minio_data:
+  # opensearch_data:
